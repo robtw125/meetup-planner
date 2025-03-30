@@ -17,11 +17,15 @@ model Poll {
   id          String @id @default(uuid())
   title       String
   description String
+  Vote        Vote[]
 }
 
 model Vote {
   id              String       @id @default(uuid())
   participantName String
+  poll            Poll         @relation(fields: [pollId], references: [id])
+  pollId          String
+  createdAt       DateTime     @default(now())
   daysOfVote      DaysOfVote[]
 }
 
