@@ -2,7 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from 'src/prisma.service';
 import { CreatePollDto } from './dto/create-poll.dto';
 import { Poll } from '@prisma/client';
-import type { PrismaClient, Prisma, Vote, Day } from '@prisma/client';
+import type {
+  PrismaClient,
+  Prisma,
+  Vote,
+  Day,
+  DaysOfVote,
+} from '@prisma/client';
 import { CreateVoteDto } from './dto/create-vote.dto';
 import { DefaultArgs } from '@prisma/client/runtime/library';
 
@@ -10,6 +16,14 @@ type PrismaTransaction = Omit<
   PrismaClient<Prisma.PrismaClientOptions, never, DefaultArgs>,
   '$on' | '$connect' | '$disconnect' | '$use' | '$transaction' | '$extends'
 >;
+
+interface FullDaysOfVote extends DaysOfVote {
+  day: Day;
+}
+
+interface VoteIncludingDays extends Vote {
+  daysOfVote: FullDaysOfVote[];
+}
 
 @Injectable()
 export class PollsService {
@@ -96,11 +110,37 @@ export class PollsService {
     });
   }
 
+  private cleanVote(vote: VoteIncludingDays) {
+    const { daysOfVote, ...rest } = vote;
+    const cleanedVote = {
+      ...rest,
+      days: daysOfVote.map((dayVote) => dayVote.day.date),
+    };
+
+    return cleanedVote;
+  }
+
   async getAllVotesOfPoll(pollId: string) {
-    return this.prismaService.vote.findMany({ where: { pollId } });
+    await this.findPoll(pollId);
+
+    const votes = await this.prismaService.vote.findMany({
+      where: { pollId },
+      include: { daysOfVote: { include: { day: true } } },
+    });
+
+    if (!votes) return [];
+
+    return votes.map((vote) => this.cleanVote(vote));
   }
 
   async getSingleVote(voteId: string) {
-    return this.prismaService.vote.findUnique({ where: { id: voteId } });
+    const vote = await this.prismaService.vote.findUnique({
+      where: { id: voteId },
+      include: { daysOfVote: { include: { day: true } } },
+    });
+
+    if (!vote) throw new NotFoundException();
+
+    return this.cleanVote(vote);
   }
 }
