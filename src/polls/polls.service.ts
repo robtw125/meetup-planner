@@ -96,7 +96,11 @@ export class PollsService {
     });
   }
 
-  async getAllVotesOfPoll() {}
+  async getAllVotesOfPoll(pollId: string) {
+    return this.prismaService.vote.findMany({ where: { pollId } });
+  }
 
-  async getSingleVoteOfPoll() {}
+  async getSingleVote(voteId: string) {
+    return this.prismaService.vote.findUnique({ where: { id: voteId } });
+  }
 }
