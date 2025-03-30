@@ -114,7 +114,7 @@ export class PollsService {
     const { daysOfVote, ...rest } = vote;
     const cleanedVote = {
       ...rest,
-      days: daysOfVote.map((dayVote) => dayVote.day.date),
+      timestamps: daysOfVote.map((dayVote) => dayVote.day.date.getTime()),
     };
 
     return cleanedVote;
